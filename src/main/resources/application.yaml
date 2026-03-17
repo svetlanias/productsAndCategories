@@ -1,0 +1,13 @@
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: true
+  datasource:
+    url: jdbc:postgresql://localhost:5432/productCat
+    username: postgres
+    password: 06sv10ds04pr
+  flyway:
+  thymeleaf:
+    cashe: false
+
