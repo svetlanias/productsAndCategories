@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Атрибуты категории</title>
+    <meta charset="UTF-8">
+</head>
+<body>
+
+<h2>Привязанные атрибуты</h2>
+<ul>
+    <li th:each="attr : ${boundAttributes}">
+        <span th:text="${attr.attributeName}"></span>
+        <span th:if="${attr.required}"> (обязательный)</span>
+    </li>
+</ul>
+
+<hr>
+
+<h2>Добавить атрибут</h2>
+<form method="post" th:action="@{/categories/{id}/attributes(id=${categoryId})}">
+    Атрибут:
+    <select name="attributeId" required>
+        <option value="">-- Выберите --</option>
+        <option th:each="attr : ${allAttributes}"
+                th:value="${attr.id}"
+                th:text="${attr.name}">
+        </option>
+    </select><br><br>
+
+    Обязательный:
+    <input type="checkbox" name="required" value="true"><br><br>
+
+    <button type="submit">Привязать</button>
+</form>
+
+<a href="/categories">← Назад к категориям</a>
+
+</body>
+</html>

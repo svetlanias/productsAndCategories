@@ -13,6 +13,8 @@
         <span th:if="${cat.parentName != null}"
               th:text="' (родитель: ' + ${cat.parentName} + ')'">
         </span>
+        &nbsp;
+        <a th:href="@{/categories/{id}/attributes(id=${cat.id})}">Управление атрибутами</a>
     </li>
 </ul>
 

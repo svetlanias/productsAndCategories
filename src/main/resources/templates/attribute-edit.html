@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Редактировать атрибут</title>
+    <meta charset="UTF-8">
+</head>
+<body>
+
+<h2>Редактировать атрибут</h2>
+<form method="post" th:action="@{/attributes/update}" th:object="${attribute}">
+    <input type="hidden" th:field="*{id}" />
+
+    Название: <input type="text" th:field="*{name}" required><br><br>
+
+    Ключ (shortName): <input type="text" th:field="*{shortName}" required><br><br>
+
+    Тип:
+    <select th:field="*{aType}" required>
+        <option value="string">Текст</option>
+        <option value="number">Число</option>
+        <option value="enum">Список (enum)</option>
+    </select><br><br>
+
+    Возможные значения (только для типа "Список"):
+    <textarea name="stringValuesJson" rows="5" cols="50"
+              th:text="${attribute.stringValuesJson} ?: ''"
+              placeholder='["значение1", "значение2"]'></textarea>
+    <br><small>Введите валидный JSON-массив строк</small><br><br>
+
+    <button type="submit">Сохранить</button>
+    <a href="/attributes">Отмена</a>
+</form>
+
+</body>
+</html>

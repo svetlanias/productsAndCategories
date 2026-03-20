@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Атрибуты</title>
+    <meta charset="UTF-8">
+</head>
+<body>
+
+<h1>Список атрибутов</h1>
+<ul>
+    <li th:each="attr : ${attributes}">
+        <strong th:text="${attr.name}"></strong>
+        (<span th:text="${attr.shortName}"></span>)
+        <br>
+        Значения:
+        <span th:if="${attr.stringValues != null}">
+        <span th:each="val, iter : ${attr.stringValues}">
+            <span th:text="${val}"></span>
+            <span th:unless="${iter.last}">, </span>
+        </span>
+    </span>
+        <br>
+        <a th:href="@{/attributes/edit/{id}(id=${attr.id})}">Редактировать</a>
+    </li>
+</ul>
+
+<hr>
+
+<h2>Добавить атрибут</h2>
+<form method="post" th:action="@{/attributes}" th:object="${newAttribute}">
+    Название: <input type="text" th:field="*{name}" required><br><br>
+
+    Ключ (shortName): <input type="text" th:field="*{shortName}" required><br><br>
+
+    Тип:
+    <select th:field="*{aType}" required>
+        <option value="string">Текст</option>
+        <option value="number">Число</option>
+        <option value="enum">Список (enum)</option>
+    </select><br><br>
+
+    Возможные значения (только для типа "Список"):
+    <textarea name="stringValuesJson" rows="3" cols="50"
+              placeholder='["значение1", "значение2"]'></textarea>
+    <br><small>Введите валидный JSON-массив строк</small><br><br>
+
+    <button type="submit">Создать</button>
+</form>
+
+</body>
+</html>
