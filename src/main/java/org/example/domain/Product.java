@@ -9,6 +9,7 @@ import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
 import java.math.BigDecimal;
+import java.util.HashMap;
 import java.util.Map;
 
 @Data
@@ -40,6 +41,6 @@ public class Product {
     private Category category;
 
     @JdbcTypeCode(SqlTypes.JSON)
-    @Column(columnDefinition = "jsonb", nullable = false)
-    private Map<String, Object> attributes;
+    @Column(columnDefinition = "jsonb", nullable = true)
+    private Map<String, Object> attributes = new HashMap<>();
 }

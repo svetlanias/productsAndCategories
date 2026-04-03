@@ -9,9 +9,8 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class CategoryAttributeDTO {
+public class CategoryAttributeRequest {
     private Long attributeId;
-    private String attributeName;
-    private boolean required;
+    private boolean required = false;
 }
 

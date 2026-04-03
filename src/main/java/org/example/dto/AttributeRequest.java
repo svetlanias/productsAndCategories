@@ -1,6 +1,6 @@
 package org.example.dto;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -12,13 +12,15 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@JsonInclude(JsonInclude.Include.NON_NULL) // не показывать null поля в JSON ответе
-public class AttributeDTO {
+public class AttributeRequest {
 
-    private Long id;
     private String name;
     private String shortName;
+
+    @JsonProperty("aType")
     private String aType;
-    private List<String> stringValues; // только для aType = "enum"
+
+    // Передаётся только если aType = "enum"
+    private List<String> stringValues;
 }
 

@@ -25,13 +25,15 @@ public class Attribute {
     @Column(nullable = false)
     private String name;
 
-    @Column(nullable = false)
+    @Column(nullable = false, name = "short_name")
     private String shortName;
 
-    @Column(nullable = false)
+    // Тип атрибута: "string", "number", "boolean", "enum"
+    @Column(nullable = false, name = "a_type")
     private String aType;
 
+    // Хранится только если aType = "enum"
     @JdbcTypeCode(SqlTypes.JSON)
-    @Column(columnDefinition = "jsonb")
+    @Column(columnDefinition = "jsonb", name = "string_values")
     private List<String> stringValues;
 }

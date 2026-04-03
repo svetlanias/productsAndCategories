@@ -1,77 +1,54 @@
 package org.example.controllers;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.RequiredArgsConstructor;
 import org.example.dto.AttributeDTO;
+import org.example.dto.AttributeRequest;
 import org.example.service.AttributeService;
-import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-@Controller
-@RequestMapping("/attributes")
+@RestController
+@RequestMapping("/api/attributes")
+@RequiredArgsConstructor
 public class AttributeController {
 
     private final AttributeService attributeService;
-    private final ObjectMapper objectMapper = new ObjectMapper();
 
-    public AttributeController(AttributeService attributeService) {
-        this.attributeService = attributeService;
-    }
-
+    // GET /api/attributes
     @GetMapping
-    public String list(Model model) {
-        List<AttributeDTO> attributes = attributeService.getAllAttributes();
-        model.addAttribute("attributes", attributes);
-        model.addAttribute("newAttribute", new AttributeDTO());
-        return "attributes";
+    public ResponseEntity<List<AttributeDTO>> getAll() {
+        return ResponseEntity.ok(attributeService.getAllAttributes());
     }
 
+    // GET /api/attributes/{id}
+    @GetMapping("/{id}")
+    public ResponseEntity<AttributeDTO> getById(@PathVariable Long id) {
+        return ResponseEntity.ok(attributeService.getAttributeById(id));
+    }
+
+    // POST /api/attributes
     @PostMapping
-    public String create(@RequestParam String name,
-                         @RequestParam String shortName,
-                         @RequestParam String aType,
-                         @RequestParam(required = false) String stringValuesJson) {
-
-        List<String> stringValues = null;
-        if ("enum".equals(aType) && stringValuesJson != null && !stringValuesJson.trim().isEmpty()) {
-            try {
-                stringValues = objectMapper.readValue(stringValuesJson, new TypeReference<List<String>>() {});
-            } catch (Exception e) {
-                throw new RuntimeException("Неверный формат JSON для значений: " + stringValuesJson);
-            }
-        }
-
-        attributeService.createAttribute(name, shortName, aType, stringValues);
-        return "redirect:/attributes";
+    public ResponseEntity<AttributeDTO> create(@RequestBody AttributeRequest request) {
+        AttributeDTO created = attributeService.createAttribute(request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
-    @GetMapping("/edit/{id}")
-    public String editForm(@PathVariable Long id, Model model) {
-        AttributeDTO attribute = attributeService.getAttributeById(id);
-        model.addAttribute("attribute", attribute);
-        return "attribute-edit";
+    // PUT /api/attributes/{id}
+    @PutMapping("/{id}")
+    public ResponseEntity<AttributeDTO> update(
+            @PathVariable Long id,
+            @RequestBody AttributeRequest request) {
+        AttributeDTO updated = attributeService.updateAttribute(id, request);
+        return ResponseEntity.ok(updated);
     }
 
-    @PostMapping("/update")
-    public String update(@RequestParam Long id,
-                         @RequestParam String name,
-                         @RequestParam String shortName,
-                         @RequestParam String aType,
-                         @RequestParam(required = false) String stringValuesJson) {
-
-        List<String> stringValues = null;
-        if ("enum".equals(aType) && stringValuesJson != null && !stringValuesJson.trim().isEmpty()) {
-            try {
-                stringValues = objectMapper.readValue(stringValuesJson, new TypeReference<List<String>>() {});
-            } catch (Exception e) {
-                throw new RuntimeException("Неверный формат JSON: " + stringValuesJson);
-            }
-        }
-
-        attributeService.updateAttribute(id, name, shortName, aType, stringValues);
-        return "redirect:/attributes";
+    // DELETE /api/attributes/{id}
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> delete(@PathVariable Long id) {
+        attributeService.deleteAttribute(id);
+        return ResponseEntity.noContent().build();
     }
 }

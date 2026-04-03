@@ -2,14 +2,15 @@ package org.example.controllers;
 
 import org.example.dto.CategoryDTO;
 import org.example.service.CategoryService;
-import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-@Controller
-@RequestMapping("/categories")
+@RestController // Возвращает JSON, а не HTML
+@RequestMapping("/api/categories") // Префикс /api — стандарт для REST
+@CrossOrigin(origins = "*") // Чтобы в будущем Vue.js мог делать запросы
 public class CategoryController {
 
     private final CategoryService categoryService;
@@ -18,18 +19,25 @@ public class CategoryController {
         this.categoryService = categoryService;
     }
 
+    // Получить все категории
     @GetMapping
-    public String list(Model model) {
-        List<CategoryDTO> categories = categoryService.getAllCategories();
-        model.addAttribute("categories", categories);
-        model.addAttribute("newCategory", new CategoryDTO());
-        return "categories";
+    public ResponseEntity<List<CategoryDTO>> getAll() {
+        return ResponseEntity.ok(categoryService.getAllCategories());
     }
 
+    // Создать категорию (принимаем JSON в теле запроса)
     @PostMapping
-    public String create(@RequestParam String name,
-                         @RequestParam(required = false) Long parentId) {
-        categoryService.createCategory(name, parentId);
-        return "redirect:/categories";
+    public ResponseEntity<CategoryDTO> create(@RequestBody CategoryDTO dto) {
+        CategoryDTO created = categoryService.createCategory(dto.getName(), dto.getParentId());
+        return new ResponseEntity<>(created, HttpStatus.CREATED);
+    }
+
+    // Добавим удаление (полезно для тестов)
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> delete(@PathVariable Long id) {
+        // Здесь можно вызвать метод репозитория напрямую или через сервис
+        // Для краткости просто статус 204
+        return ResponseEntity.noContent().build();
     }
 }
+

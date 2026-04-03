@@ -39,27 +39,18 @@ public class CategoryServiceImpl implements CategoryService {
     public List<CategoryDTO> getAllCategories() {
         List<Category> categories = categoryRepository.findAll();
 
-        // Создаём мапу id → name для быстрого поиска
-        Map<Long, String> idToName = categories.stream()
-                .collect(Collectors.toMap(Category::getId, Category::getName));
-
+        // Сначала мапим в DTO, заполняя ID и Name
         return categories.stream()
-                .map(cat -> {
-                    CategoryDTO dto = buildCategoryDTO(cat);
-                    if (cat.getParent() != null) {
-                        dto.setParentName(idToName.get(cat.getParent().getId()));
-                    }
-                    return dto;
-                })
+                .map(this::buildCategoryDTO)
                 .collect(Collectors.toList());
     }
 
     private CategoryDTO buildCategoryDTO(Category cat) {
-        return new CategoryDTO(
-                cat.getId(),
-                cat.getName(),
-                cat.getParent() != null ? cat.getParent().getId() : null,
-                null
-        );
+        return CategoryDTO.builder()
+                .id(cat.getId())
+                .name(cat.getName())
+                .parentId(cat.getParent() != null ? cat.getParent().getId() : null)
+                .parentName(cat.getParent() != null ? cat.getParent().getName() : null)
+                .build();
     }
 }
