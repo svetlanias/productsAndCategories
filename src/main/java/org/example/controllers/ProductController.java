@@ -3,8 +3,11 @@ package org.example.controllers;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.example.dto.FacetResponse;
 import org.example.dto.ProductDTO;
+import org.example.dto.ProductFilterRequest;
 import org.example.service.ProductService;
+import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -60,6 +63,20 @@ public class ProductController {
     @GetMapping("/category/{categoryId}")
     public List<ProductDTO> getByCategory(@PathVariable Long categoryId) {
         return productService.getProductsByCategory(categoryId);
+    }
+
+    // Фасеточная фильтрация товаров
+    @PostMapping("/filter")
+    public ResponseEntity<Page<ProductDTO>> filterProducts(@RequestBody ProductFilterRequest filter) {
+        Page<ProductDTO> result = productService.filterProducts(filter);
+        return ResponseEntity.ok(result);
+    }
+
+    // Получение фасетов для фильтрации
+    @PostMapping("/facets")
+    public ResponseEntity<FacetResponse> getFacets(@RequestBody ProductFilterRequest filter) {
+        FacetResponse facets = productService.getFacets(filter);
+        return ResponseEntity.ok(facets);
     }
 }
 

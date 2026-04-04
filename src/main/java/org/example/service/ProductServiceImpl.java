@@ -1,11 +1,23 @@
 package org.example.service;
 
 import jakarta.transaction.Transactional;
+import org.example.dao.CategoryAttributeRepository;
 import org.example.dao.CategoryRepository;
 import org.example.dao.ProductRepository;
+import org.example.dao.ProductSpecificationBuilder;
+import org.example.domain.Attribute;
 import org.example.domain.Category;
+import org.example.domain.CategoryAttribute;
 import org.example.domain.Product;
+import org.example.dto.FacetResponse;
 import org.example.dto.ProductDTO;
+import org.example.dto.ProductFilterRequest;
+import org.example.service.ProductService;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -13,8 +25,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -22,11 +33,18 @@ public class ProductServiceImpl implements ProductService {
 
     private final ProductRepository productRepository;
     private final CategoryRepository categoryRepository;
+    private final CategoryAttributeRepository categoryAttributeRepository;
+    private final ProductSpecificationBuilder specificationBuilder;
     private final String uploadPath = "src/main/resources/static/images/products";
 
-    public ProductServiceImpl(ProductRepository productRepository, CategoryRepository categoryRepository) {
+    public ProductServiceImpl(ProductRepository productRepository,
+                              CategoryRepository categoryRepository,
+                              CategoryAttributeRepository categoryAttributeRepository,
+                              ProductSpecificationBuilder specificationBuilder) {
         this.productRepository = productRepository;
         this.categoryRepository = categoryRepository;
+        this.categoryAttributeRepository = categoryAttributeRepository;
+        this.specificationBuilder = specificationBuilder;
     }
 
     @Override
@@ -107,7 +125,107 @@ public class ProductServiceImpl implements ProductService {
                 .collect(Collectors.toList());
     }
 
+    @Override
+    public Page<ProductDTO> filterProducts(ProductFilterRequest filter) {
+        // Построение спецификации фильтрации
+        Specification<Product> spec = specificationBuilder.buildFilterSpecification(
+                filter.getCategoryId(),
+                filter.getExactFilters(),
+                convertPriceRanges(filter.getPriceRanges()),
+                filter.getSearchQuery()
+        );
+
+        // Пагинация и сортировка
+        Pageable pageable = createPageable(filter);
+
+        Page<Product> productPage = productRepository.findAll(spec, pageable);
+        return productPage.map(this::convertToDTO);
+    }
+
+    @Override
+    public FacetResponse getFacets(ProductFilterRequest filter) {
+        // Сначала получаем отфильтрованные товары (без пагинации)
+        Specification<Product> spec = specificationBuilder.buildFilterSpecification(
+                filter.getCategoryId(),
+                filter.getExactFilters(),
+                convertPriceRanges(filter.getPriceRanges()),
+                filter.getSearchQuery()
+        );
+
+        List<Product> products = productRepository.findAll(spec);
+
+        // Получаем атрибуты для категории
+        List<CategoryAttribute> categoryAttributes = new ArrayList<>();
+        if (filter.getCategoryId() != null) {
+            categoryAttributes = categoryAttributeRepository.findByCategoryId(filter.getCategoryId());
+        }
+
+        // Считаем фасеты
+        Map<String, List<FacetResponse.FacetValue>> facets = new HashMap<>();
+
+        for (CategoryAttribute catAttr : categoryAttributes) {
+            Attribute attr = catAttr.getAttribute();
+            String attrName = attr.getShortName();
+
+            Map<String, Long> valueCounts = new HashMap<>();
+
+            for (Product product : products) {
+                Object value = product.getAttributes().get(attrName);
+                if (value != null) {
+                    String stringValue = value.toString();
+                    valueCounts.merge(stringValue, 1L, Long::sum);
+                }
+            }
+
+            List<FacetResponse.FacetValue> facetValues = valueCounts.entrySet().stream()
+                    .map(entry -> FacetResponse.FacetValue.builder()
+                            .value(entry.getKey())
+                            .count(entry.getValue())
+                            .build())
+                    .sorted((a, b) -> a.getValue().compareTo(b.getValue()))
+                    .collect(Collectors.toList());
+
+            facets.put(attrName, facetValues);
+        }
+
+        return FacetResponse.builder()
+                .facets(facets)
+                .build();
+    }
+
     // Вспомогательные методы
+    private Pageable createPageable(ProductFilterRequest filter) {
+        int page = filter.getPage() != null ? filter.getPage() : 0;
+        int size = filter.getSize() != null ? filter.getSize() : 20;
+
+        Sort sort = Sort.unsorted();
+        if (filter.getSortBy() != null && !filter.getSortBy().isBlank()) {
+            Sort.Direction direction = filter.getSortDirection() != null
+                    ? Sort.Direction.fromString(filter.getSortDirection().name())
+                    : Sort.Direction.ASC;
+            sort = Sort.by(direction, filter.getSortBy());
+        }
+
+        return PageRequest.of(page, size, sort);
+    }
+
+    private Map<String, ProductSpecificationBuilder.PriceRange> convertPriceRanges(
+            Map<String, ProductFilterRequest.PriceRange> requestRanges) {
+        if (requestRanges == null || requestRanges.isEmpty()) {
+            return null;
+        }
+
+        Map<String, ProductSpecificationBuilder.PriceRange> result = new HashMap<>();
+        for (Map.Entry<String, ProductFilterRequest.PriceRange> entry : requestRanges.entrySet()) {
+            ProductFilterRequest.PriceRange reqRange = entry.getValue();
+            if (reqRange != null) {
+                result.put(entry.getKey(), new ProductSpecificationBuilder.PriceRange(
+                        reqRange.getMin(), reqRange.getMax()));
+            }
+        }
+        return result;
+    }
+
     private String saveImage(MultipartFile image) {
         if (image == null || image.isEmpty()) return null;
         try {
