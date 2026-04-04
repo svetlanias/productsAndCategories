@@ -10,6 +10,7 @@ import org.example.domain.Category;
 import org.example.domain.CategoryAttribute;
 import org.example.domain.Product;
 import org.example.dto.FacetResponse;
+import org.example.dto.Filter;
 import org.example.dto.ProductDTO;
 import org.example.dto.ProductFilterRequest;
 import org.example.service.ProductService;
@@ -26,7 +27,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
-import java.util.stream.Collectors;
+        import java.util.stream.Collectors;
 
 @Service
 public class ProductServiceImpl implements ProductService {
@@ -127,10 +128,22 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     public Page<ProductDTO> filterProducts(ProductFilterRequest filter) {
+        // Конвертация нового формата фильтров в старый формат (exactFilters)
+        Map<String, List<String>> exactFilters = convertFiltersToExactFilters(filter.getFilters());
+
+        // Если есть оба формата, объединяем их
+        if (filter.getExactFilters() != null && !filter.getExactFilters().isEmpty()) {
+            if (exactFilters == null) {
+                exactFilters = filter.getExactFilters();
+            } else {
+                exactFilters.putAll(filter.getExactFilters());
+            }
+        }
+
         // Построение спецификации фильтрации
         Specification<Product> spec = specificationBuilder.buildFilterSpecification(
                 filter.getCategoryId(),
-                filter.getExactFilters(),
+                exactFilters,
                 convertPriceRanges(filter.getPriceRanges()),
                 filter.getSearchQuery()
         );
@@ -144,10 +157,22 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     public FacetResponse getFacets(ProductFilterRequest filter) {
+        // Конвертация нового формата фильтров в старый формат (exactFilters)
+        Map<String, List<String>> exactFilters = convertFiltersToExactFilters(filter.getFilters());
+
+        // Если есть оба формата, объединяем их
+        if (filter.getExactFilters() != null && !filter.getExactFilters().isEmpty()) {
+            if (exactFilters == null) {
+                exactFilters = filter.getExactFilters();
+            } else {
+                exactFilters.putAll(filter.getExactFilters());
+            }
+        }
+
         // Сначала получаем отфильтрованные товары (без пагинации)
         Specification<Product> spec = specificationBuilder.buildFilterSpecification(
                 filter.getCategoryId(),
-                filter.getExactFilters(),
+                exactFilters,
                 convertPriceRanges(filter.getPriceRanges()),
                 filter.getSearchQuery()
         );
@@ -224,6 +249,27 @@ public class ProductServiceImpl implements ProductService {
             }
         }
         return result;
+    }
+
+    /**
+     * Конвертация нового формата фильтров (список Filter) в старый формат (Map exactFilters)
+     */
+    private Map<String, List<String>> convertFiltersToExactFilters(List<Filter> filters) {
+        if (filters == null || filters.isEmpty()) {
+            return null;
+        }
+
+        Map<String, List<String>> exactFilters = new HashMap<>();
+        for (Filter filter : filters) {
+            if (filter.getAttributeKey() != null && filter.getValues() != null && !filter.getValues().isEmpty()) {
+                // Поддерживаем только оператор EQ для точного соответствия
+                if ("EQ".equalsIgnoreCase(filter.getOperator()) ||
+                        "IN".equalsIgnoreCase(filter.getOperator())) {
+                    exactFilters.put(filter.getAttributeKey(), filter.getValues());
+                }
+            }
+        }
+        return exactFilters;
     }
 
     private String saveImage(MultipartFile image) {

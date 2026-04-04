@@ -20,6 +20,8 @@ public class ProductFilterRequest {
 
     private Long categoryId;
 
+    private List<Filter> filters;
+
     // Фильтры по точным значениям (для string, boolean, enum)
     private Map<String, List<String>> exactFilters;
 
