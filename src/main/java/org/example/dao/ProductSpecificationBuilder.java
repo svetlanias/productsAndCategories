@@ -71,42 +71,55 @@ public class ProductSpecificationBuilder {
                 }
             }
 
-            // Диапазоны числовых атрибутов (JSONB)
-            if (priceRanges != null && !priceRanges.isEmpty()) {
-                for (Map.Entry<String, PriceRange> entry : priceRanges.entrySet()) {
-                    String attributeName = entry.getKey();
-                    PriceRange range = entry.getValue();
+            // Диапазоны числовых атрибутов
+            	            if (priceRanges != null && !priceRanges.isEmpty()) {
+                	                for (Map.Entry<String, PriceRange> entry : priceRanges.entrySet()) {
+                    	                    String attributeName = entry.getKey();
+                    	                    PriceRange range = entry.getValue();
 
-                    if (range == null) continue;
+                    	                    if (range == null) continue;
 
-                    var jsonPath = root.get("attributes");
-                    var attributeValue = criteriaBuilder.function(
-                            "jsonb_extract_path_text",
-                            String.class,
-                            jsonPath,
-                            criteriaBuilder.literal(attributeName)
-                    );
+                    	                    // Специальная обработка для основного поля цены
+                    	                    if ("price".equals(attributeName)) {
+                        	                        Path<BigDecimal> pricePath = root.get("price");
+                        	                        if (range.getMin() != null) {
+                            	                            predicates.add(criteriaBuilder.greaterThanOrEqualTo(pricePath, range.getMin()));
+                            	                        }
+                        	                        if (range.getMax() != null) {
+                            	                            predicates.add(criteriaBuilder.lessThanOrEqualTo(pricePath, range.getMax()));
+                            	                        }
+                        	                    } else {
+                        	                        // Обработка для числовых атрибутов внутри JSON (если понадобятся)
+                        	                        var jsonPath = root.get("attributes");
+                        	                        var attributeValue = criteriaBuilder.function(
+                                	                                "jsonb_extract_path_text",
+                                	                                String.class,
+                                	                                jsonPath,
+                                	                                criteriaBuilder.literal(attributeName)
+                                	                        );
 
-                    // Преобразуем текст в numeric для сравнения
-                    var numericValue = criteriaBuilder.function(
-                            "CAST",
-                            BigDecimal.class,
-                            attributeValue,
-                            criteriaBuilder.literal("numeric")
-                    );
+                        	                        // Преобразуем текст в numeric для сравнения
+                        	                        // Исправлено использование CAST для совместимости с Hibernate 6+
+                        	                        var numericValue = criteriaBuilder.function(
+                                	                                "cast",
+                        	                                BigDecimal.class,
+                        	                                attributeValue,
+                        	                                criteriaBuilder.literal("numeric")
+                        	                        );
 
-                    if (range.getMin() != null) {
-                        predicates.add(criteriaBuilder.greaterThanOrEqualTo(numericValue, range.getMin()));
-                    }
-                    if (range.getMax() != null) {
-                        predicates.add(criteriaBuilder.lessThanOrEqualTo(numericValue, range.getMax()));
-                    }
+                        	                        if (range.getMin() != null) {
+                        	                            predicates.add(criteriaBuilder.greaterThanOrEqualTo(numericValue, range.getMin()));
+                                                }
+                        	                        if (range.getMax() != null) {
+                        	                            predicates.add(criteriaBuilder.lessThanOrEqualTo(numericValue, range.getMax()));
+                        	                        }
+                                            }
                 }
             }
-
             return criteriaBuilder.and(predicates.toArray(new jakarta.persistence.criteria.Predicate[0]));
         };
     }
+
 
     /**
      * Вспомогательный класс для диапазона цен
